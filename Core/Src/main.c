@@ -263,6 +263,7 @@ int main(void)
 	angle_rad = i2c_AS5600_get_angle();
 	angle_rad_with_track = i2c_AS5600_get_angle_with_track();
 	angle_rad_velocity = as5600_get_velocity();
+  angle_rad_velocity = lowpassfilter(angle_rad_velocity);
 	angle_grad = rad_to_grad(angle_rad);
 	
 //	sprintf(t_data, "rad_angle=%.2f, grad_angle=%.2f", angle_rad, angle_grad);
@@ -278,7 +279,7 @@ int main(void)
 	// 速度闭环控制
 	Uq = _constrain(Kp * (-(target_velocity - angle_rad_velocity) * 180 / PI), -6, 6);
 	setPhaseVoltage(Uq, 0, _electricalAngle());
-	  
+	                        
   }
   /* USER CODE END 3 */
 }

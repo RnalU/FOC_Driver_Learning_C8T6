@@ -22,5 +22,6 @@ unsigned char write_reg(unsigned char reg, unsigned char value);
 float i2c_AS5600_get_angle_with_track(void);
 float i2c_AS5600_get_angle(void);
 float as5600_get_velocity(void);
+float lowpassfilter(float input_value);
 
 #endif

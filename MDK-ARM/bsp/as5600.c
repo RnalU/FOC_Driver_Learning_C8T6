@@ -18,7 +18,9 @@ float velocity = 0;
 // µÍÍ¨ÂË²¨
 uint32_t time_stamp = 0;
 uint32_t time_stamp_pre = 0;
+float Tf = 0.001;
 float y_prev = 0;
+float dt = 0;
 
 unsigned char write_reg(unsigned char reg, unsigned char value)
 {
@@ -91,7 +93,7 @@ float as5600_get_velocity(void)
 float lowpassfilter(float input_value)
 {
 	time_stamp = TIM2->CNT + us_counter_period_tim2;
-	float dt = (time_stamp - time_stamp_pre) * 1e-6;
+	dt = (time_stamp - time_stamp_pre) * 1e-6;
 	
 	if (dt < 0.f)
 	{
@@ -104,6 +106,9 @@ float lowpassfilter(float input_value)
 		time_stamp_pre = time_stamp;
 		return input_value;
 	}
-	float alpha = 
-	
+	float alpha = Tf / ( Tf + dt );
+	float y = alpha * y_prev + (1.0f - alpha) * input_value;
+	y_prev = y;
+	time_stamp_pre = time_stamp;
+	return y;
 }
