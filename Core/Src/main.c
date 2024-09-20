@@ -255,7 +255,7 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	motor_init();
 	__HAL_TIM_SET_PRESCALER(&htim1, (int)((CLOCK_FRE / fre) / 100));
-	u8 i=0; 
+	u8 info_counter = 0;
 
   // PID初始化
   PID_init(&pid_current, PID_DELTA, pid_current_para, Uq_limit, 0.8);
@@ -270,30 +270,30 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	angle_rad = i2c_AS5600_get_angle();
-	angle_rad_with_track = i2c_AS5600_get_angle_with_track();
-	angle_rad_velocity = as5600_get_velocity();
-  angle_rad_velocity = lowpassfilter(angle_rad_velocity);
-	angle_grad = rad_to_grad(angle_rad);
-	
-//	sprintf(t_data, "rad_angle=%.2f, grad_angle=%.2f", angle_rad, angle_grad);
-//	printf("rad_angle=%.2f, grad_angle=%.2f\r\n", angle_rad, angle_grad);
-	  printf("velocity=%.3f\r\n", angle_rad_velocity);
-	// velocityOpenloop(1);
-	  
-	
-	// 位置闭环控制	
-	// Uq = _constrain(Kp * (target_angle- angle_grad), -6, 6);
-	// setPhaseVoltage(Uq, 0, _electricalAngle());
-	  
-	// 速度闭环控制
-	// Uq = -1 * _constrain(Kp * ((target_velocity - angle_rad_velocity) * 180 / PI), -Uq_limit, Uq_limit);
-	
-  Uq = -1 * PID_calc(&pid_current, angle_rad_velocity, target_velocity);
+    angle_rad = i2c_AS5600_get_angle();
+    angle_rad_with_track = i2c_AS5600_get_angle_with_track();
+    angle_rad_velocity = as5600_get_velocity();
+    angle_rad_velocity = lowpassfilter(angle_rad_velocity);
+    angle_grad = rad_to_grad(angle_rad);
+    
+    // 位置闭环控制	
+    // Uq = _constrain(Kp * (target_angle- angle_grad), -6, 6);
+    // setPhaseVoltage(Uq, 0, _electricalAngle());
+      
+    // 速度闭环控制
+    // Uq = -1 * _constrain(Kp * ((target_velocity - angle_rad_velocity) * 180 / PI), -Uq_limit, Uq_limit);
+    
+    Uq = -1 * PID_calc(&pid_current, angle_rad_velocity, target_velocity);
 
-  electrnic_angle = _electricalAngle();
-	setPhaseVoltage(Uq, 0, electrnic_angle);
-	                        
+    electrnic_angle = _electricalAngle();
+    setPhaseVoltage(Uq, 0, electrnic_angle);
+
+    info_counter++;
+    if (info_counter > 30)
+    {
+      printf("%.2f\r\n", angle_rad_velocity);
+      info_counter = 0;
+    }
   }
   /* USER CODE END 3 */
 }

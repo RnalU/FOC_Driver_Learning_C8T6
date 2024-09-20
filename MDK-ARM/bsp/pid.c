@@ -21,7 +21,7 @@
   * @param[in]      PID: 0: kp, 1: ki, 2:kd
   * @param[in]      max_out: pid max out
   * @param[in]      max_iout: pid max iout
-  * @retval         none
+  * @retval         none‘
   */
 /**
   * @brief          pid struct data init
