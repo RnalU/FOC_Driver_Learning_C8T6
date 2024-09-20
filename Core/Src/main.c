@@ -32,6 +32,7 @@
 #include "foc.h"
 #include "math.h"
 #include "as5600.h"
+#include "pid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,6 +71,10 @@ int fputc(int ch,FILE *f)
 	return ch;
 }
 
+// current_pid_class
+pid_type_def pid_current = {0};
+const float pid_current_para[3] = {0.008, 0.001, 0};
+
 float fre = 30000;
 uint32_t us_counter_period_tim2 = 0;
 	
@@ -80,14 +85,16 @@ float ratation_count = 0;
 float angle_rad_velocity = 0;
 
 float target_angle = 60;
-float target_velocity = 5;
-float Kp = 0.2;
+float target_velocity = -30;
+float Kp = 0.0008;
 float Uq = 0;
-float Dir = -1;
+float Dir = 1;
+float electrnic_angle = 0;
+float Uq_limit = 1.2;
 
 char t_data[50] = "";
 #define _constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
-float voltage_limit=1.5;
+float voltage_limit=3;
 float voltage_power_supply=12;
 float shaft_angle=0,open_loop_timestamp=0;
 float zero_electric_angle=0,Ualpha,Ubeta=0,Ua=0,Ub=0,Uc=0,dc_a=0,dc_b=0,dc_c=0;
@@ -138,9 +145,9 @@ void setPwm(float Ua, float Ub, float Uc) {
 	Uc = _constrain(Uc, 0.0f, voltage_limit);
 	// 计算占空??
 	// 限制占空比从0??1
-	dc_a = _constrain(Ua / voltage_power_supply, 0.0f , 0.8f );
-	dc_b = _constrain(Ub / voltage_power_supply, 0.0f , 0.8f );
-	dc_c = _constrain(Uc / voltage_power_supply, 0.0f , 0.8f );
+	dc_a = _constrain(Ua / voltage_power_supply, 0.0f , 0.5f );
+	dc_b = _constrain(Ub / voltage_power_supply, 0.0f , 0.5f );
+	dc_c = _constrain(Uc / voltage_power_supply, 0.0f , 0.5f );
 
 	//写入PWM到PWM 0 1 2 通道
 	TIM1->CCR1 = (uint32_t) roundf(dc_a*period);
@@ -153,11 +160,11 @@ void setPhaseVoltage(float Uq,float Ud, float angle_el) {
   // 帕克逆变??
   Ualpha =  -Uq*sin(angle_el);
   Ubeta =   Uq*cos(angle_el);
-
+  
   // 克拉克???变??
-  Ua = Ualpha + voltage_power_supply/2;
-  Ub = (sqrt(3)*Ubeta-Ualpha)/2 + voltage_power_supply/2;
-  Uc = (-Ualpha-sqrt(3)*Ubeta)/2 + voltage_power_supply/2;
+  Ua = Ualpha + voltage_limit/2;
+  Ub = (sqrt(3)*Ubeta-Ualpha)/2 + voltage_limit/2;
+  Uc = (-Ualpha-sqrt(3)*Ubeta)/2 + voltage_limit/2;
   setPwm(Ua,Ub,Uc);
 }
 
@@ -228,7 +235,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -249,6 +256,9 @@ int main(void)
 	motor_init();
 	__HAL_TIM_SET_PRESCALER(&htim1, (int)((CLOCK_FRE / fre) / 100));
 	u8 i=0; 
+
+  // PID初始化
+  PID_init(&pid_current, PID_DELTA, pid_current_para, Uq_limit, 0.8);
 	
   /* USER CODE END 2 */
 
@@ -277,8 +287,12 @@ int main(void)
 	// setPhaseVoltage(Uq, 0, _electricalAngle());
 	  
 	// 速度闭环控制
-	Uq = _constrain(Kp * (-(target_velocity - angle_rad_velocity) * 180 / PI), -6, 6);
-	setPhaseVoltage(Uq, 0, _electricalAngle());
+	// Uq = -1 * _constrain(Kp * ((target_velocity - angle_rad_velocity) * 180 / PI), -Uq_limit, Uq_limit);
+	
+  Uq = -1 * PID_calc(&pid_current, angle_rad_velocity, target_velocity);
+
+  electrnic_angle = _electricalAngle();
+	setPhaseVoltage(Uq, 0, electrnic_angle);
 	                        
   }
   /* USER CODE END 3 */
